@@ -1,0 +1,59 @@
+{
+  "name": "react-native-siri",
+  "version": "0.1.0",
+  "description": "Expose your app's data to Siri via iOS App Intents (iOS 16+) with a declarative Expo config plugin",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "build": "node internal/module_scripts/build.js",
+    "clean": "node internal/module_scripts/clean.js",
+    "lint": "eslint src/",
+    "test": "node internal/module_scripts/test.js",
+    "prepare": "node internal/module_scripts/prepare.js",
+    "open:ios": "node internal/module_scripts/open-ios.js",
+    "open:android": "node internal/module_scripts/open-android.js"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "react-native-siri",
+    "ReactNativeSiri"
+  ],
+  "repository": "https://github.com/mitul/react-native-siri",
+  "bugs": {
+    "url": "https://github.com/mitul/react-native-siri/issues"
+  },
+  "author": "Mitul <> ()",
+  "license": "MIT",
+  "homepage": "https://github.com/mitul/react-native-siri#readme",
+  "dependencies": {
+    "expo": "~57.0.7",
+    "react": "19.2.3",
+    "react-native": "0.86.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@types/jest": "^29.2.1",
+    "@types/react": "~19.1.1",
+    "babel-preset-expo": "~55.0.8",
+    "eslint": "~9.39.4",
+    "eslint-config-universe": "^15.0.3",
+    "expo": "^57.0.7",
+    "jest": "^29.7.0",
+    "jest-expo": "~55.0.9",
+    "prettier": "^3.0.0",
+    "react-native": "0.82.1",
+    "typescript": "^5.9.2"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "roots": [
+      "<rootDir>/src"
+    ]
+  },
+  "peerDependencies": {
+    "expo": "*",
+    "react": "*",
+    "react-native": "*"
+  }
+}

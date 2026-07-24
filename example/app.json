@@ -1,0 +1,76 @@
+{
+  "expo": {
+    "name": "TrainTracker",
+    "slug": "react-native-siri-example",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "trains",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.reactnativesiri.example"
+    },
+    "android": {
+      "package": "com.example.reactnativesiri.example",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "react-native-siri",
+        {
+          "appGroup": "group.com.example.reactnativesiri.example",
+          "siriUsageDescription": "Siri answers questions about your tracked trains.",
+          "entity": {
+            "name": "Train",
+            "collection": "trains",
+            "fields": ["name", "destination", "arrivalTime", "status"],
+            "titleField": "name",
+            "subtitleField": "destination"
+          },
+          "intents": [
+            {
+              "type": "query",
+              "name": "FindTrains",
+              "matchField": "destination",
+              "dialog": "Trains to ${value}: ${results}.",
+              "emptyDialog": "There are no trains headed to ${value} right now.",
+              "phrases": [
+                "Are there trains to ${param} in ${appName}",
+                "Find ${appName} trains to ${param}",
+                "Check ${appName} for trains to ${param}"
+              ]
+            },
+            {
+              "type": "get",
+              "name": "TrainArrival",
+              "dialog": "Train ${name} to ${destination} is expected to arrive at ${arrivalTime}. Status: ${status}.",
+              "phrases": [
+                "When does ${param} arrive in ${appName}",
+                "Ask ${appName} when ${param} gets in"
+              ]
+            },
+            {
+              "type": "action",
+              "name": "FollowTrain",
+              "deepLink": "trains://follow?id=${id}",
+              "dialog": "Following train ${name} in the app.",
+              "phrases": [
+                "Follow train ${param} in ${appName}",
+                "Track ${param} with ${appName}"
+              ]
+            }
+          ]
+        }
+      ]
+    ]
+  }
+}
