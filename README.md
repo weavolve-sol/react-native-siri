@@ -46,7 +46,7 @@ flowchart LR
 ## Installation
 
 ```sh
-npx expo install react-native-siri
+npx expo install @weavolve/react-native-siri
 ```
 
 Then configure the plugin in `app.json` (see below) and regenerate the native project:
@@ -74,7 +74,7 @@ The running example below is a package-delivery tracker called **Parcels**, but 
     "scheme": "parcels",
     "plugins": [
       [
-        "react-native-siri",
+        "@weavolve/react-native-siri",
         {
           "appGroup": "group.com.example.parcels",
           "entity": {
@@ -111,7 +111,7 @@ The running example below is a package-delivery tracker called **Parcels**, but 
 ```
 
 ```tsx
-import { syncEntities, addIntentListener } from 'react-native-siri';
+import { syncEntities, addIntentListener } from '@weavolve/react-native-siri';
 
 // Whenever your data changes, mirror it into the shared store:
 useEffect(() => {
@@ -205,7 +205,7 @@ They're copied verbatim into `ios/<AppName>/SiriIntents/` and compiled into the 
 ## JS API
 
 ```ts
-import * as Siri from 'react-native-siri';
+import * as Siri from '@weavolve/react-native-siri';
 ```
 
 | Function | Description |

@@ -1,5 +1,5 @@
 {
-  "name": "react-native-siri",
+  "name": "@weavolve/react-native-siri",
   "version": "0.1.0",
   "description": "Expose your app's data to Siri via iOS App Intents (iOS 16+) with a declarative Expo config plugin",
   "main": "build/index.js",
@@ -19,17 +19,15 @@
     "react-native-siri",
     "ReactNativeSiri"
   ],
-  "repository": "https://github.com/mitul/react-native-siri",
+  "repository": "https://github.com/weavolve-sol/react-native-siri",
   "bugs": {
-    "url": "https://github.com/mitul/react-native-siri/issues"
+    "url": "https://github.com/weavolve-sol/react-native-siri/issues"
   },
-  "author": "Mitul <> ()",
+  "author": "Mitul",
   "license": "MIT",
-  "homepage": "https://github.com/mitul/react-native-siri#readme",
-  "dependencies": {
-    "expo": "~57.0.7",
-    "react": "19.2.3",
-    "react-native": "0.86.0"
+  "homepage": "https://github.com/weavolve-sol/react-native-siri#readme",
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",

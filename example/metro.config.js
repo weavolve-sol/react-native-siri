@@ -20,7 +20,7 @@ config.resolver.nodeModulesPaths = [
 ];
 
 config.resolver.extraNodeModules = {
-  'react-native-siri': '..',
+  '@weavolve/react-native-siri': '..',
 };
 
 config.watchFolders = [path.resolve(__dirname, '..')];

@@ -3,8 +3,8 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "react-native-siri": ["../src/index"],
-      "react-native-siri/*": ["../src/*"]
+      "@weavolve/react-native-siri": ["../src/index"],
+      "@weavolve/react-native-siri/*": ["../src/*"]
     }
   }
 }

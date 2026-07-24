@@ -25,7 +25,7 @@
     },
     "plugins": [
       [
-        "react-native-siri",
+        "@weavolve/react-native-siri",
         {
           "appGroup": "group.com.example.reactnativesiri.example",
           "siriUsageDescription": "Siri answers questions about your tracked trains.",

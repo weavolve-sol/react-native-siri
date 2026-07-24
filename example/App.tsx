@@ -13,7 +13,7 @@ import {
   addIntentListener,
   donateUserActivity,
   syncEntities,
-} from 'react-native-siri';
+} from '@weavolve/react-native-siri';
 
 type Train = {
   id: string;
