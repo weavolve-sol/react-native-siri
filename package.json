@@ -1,6 +1,6 @@
 {
   "name": "@weavolve/react-native-siri",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Expose your app's data to Siri via iOS App Intents (iOS 16+) with a declarative Expo config plugin",
   "main": "build/index.js",
   "types": "build/index.d.ts",
