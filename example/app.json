@@ -32,7 +32,12 @@
           "entity": {
             "name": "Train",
             "collection": "trains",
-            "fields": ["name", "destination", "arrivalTime", "status"],
+            "fields": [
+              "name",
+              "destination",
+              "arrivalTime",
+              "status"
+            ],
             "titleField": "name",
             "subtitleField": "destination"
           },
@@ -68,9 +73,15 @@
                 "Track ${param} with ${appName}"
               ]
             }
-          ]
+          ],
+          "remote": {
+            "url": "https://example.com/demo-trains.json",
+            "timeoutSeconds": 3,
+            "cacheFallback": true
+          }
         }
-      ]
+      ],
+      "expo-background-task"
     ]
   }
 }

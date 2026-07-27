@@ -15,21 +15,8 @@ import {
   syncEntities,
 } from '@weavolve/react-native-siri';
 
-type Train = {
-  id: string;
-  name: string;
-  destination: string;
-  arrivalTime: string;
-  status: 'On time' | 'Delayed' | 'Arrived';
-};
-
-const INITIAL_TRAINS: Train[] = [
-  { id: 'RMEGR', name: 'RMEGR', destination: 'Medina', arrivalTime: '10:45 AM', status: 'On time' },
-  { id: 'KLM12', name: 'KLM12', destination: 'Gregory', arrivalTime: '11:10 AM', status: 'Delayed' },
-  { id: 'QPX07', name: 'QPX07', destination: 'Medina', arrivalTime: '11:35 AM', status: 'On time' },
-  { id: 'ZTA44', name: 'ZTA44', destination: 'Harlow', arrivalTime: '12:05 PM', status: 'On time' },
-  { id: 'BNC91', name: 'BNC91', destination: 'Gregory', arrivalTime: '12:40 PM', status: 'On time' },
-];
+import { registerSiriBackgroundSync } from './backgroundSync';
+import { INITIAL_TRAINS, Train, bumpTime } from './trains';
 
 const ACTIVITY_TYPE = 'com.example.reactnativesiri.example.viewing';
 
@@ -55,6 +42,17 @@ export default function App() {
       console.warn('Failed to sync trains to Siri', error);
     });
   }, [trains]);
+
+  // Keep the shared store fresh while the app is closed: iOS periodically
+  // runs backgroundSync.ts's task, which re-fetches data and re-syncs.
+  useEffect(() => {
+    if (Platform.OS !== 'ios') {
+      return;
+    }
+    registerSiriBackgroundSync().catch((error) => {
+      console.warn('Failed to register background sync', error);
+    });
+  }, []);
 
   // Use case 3: "Follow train RMEGR" — the generated FollowTrain intent opens
   // the app with trains://follow?id=<id>, which we handle here.
@@ -209,26 +207,6 @@ function ToolbarButton(props: { label: string; onPress: () => void }) {
       <Text style={styles.toolbarButtonText}>{props.label}</Text>
     </Pressable>
   );
-}
-
-function bumpTime(time: string): string {
-  const match = time.match(/^(\d+):(\d+) (AM|PM)$/);
-  if (!match) {
-    return time;
-  }
-  let hours = parseInt(match[1], 10);
-  let minutes = parseInt(match[2], 10) + 20;
-  let suffix = match[3];
-  if (minutes >= 60) {
-    minutes -= 60;
-    hours += 1;
-    if (hours === 12) {
-      suffix = suffix === 'AM' ? 'PM' : 'AM';
-    } else if (hours > 12) {
-      hours -= 12;
-    }
-  }
-  return `${hours}:${String(minutes).padStart(2, '0')} ${suffix}`;
 }
 
 const styles = StyleSheet.create({

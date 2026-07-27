@@ -49,6 +49,59 @@ enum ReactNativeSiriStore {
   }
 }
 
+enum ReactNativeSiriRemote {
+  /// Fetches a collection from a remote HTTPS endpoint at intent time so
+  /// Siri answers with live data even when the app has not run in a while.
+  /// A successful fetch also replaces the cached collection in the App Group
+  /// store, keeping value entities and offline fallbacks current.
+  /// Returns nil on any failure; the caller decides whether to fall back.
+  static func fetchCollection(
+    name: String,
+    url: String,
+    headersKey: String?,
+    timeout: TimeInterval
+  ) async -> [[String: Any]]? {
+    guard let endpoint = URL(string: url) else {
+      return nil
+    }
+    var request = URLRequest(
+      url: endpoint,
+      cachePolicy: .reloadIgnoringLocalCacheData,
+      timeoutInterval: timeout
+    )
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    if
+      let headersKey,
+      let raw = ReactNativeSiriStore.string(forKey: headersKey),
+      let data = raw.data(using: .utf8),
+      let headers = (try? JSONSerialization.jsonObject(with: data)) as? [String: String]
+    {
+      for (field, value) in headers {
+        request.setValue(value, forHTTPHeaderField: field)
+      }
+    }
+    do {
+      let (data, response) = try await URLSession.shared.data(for: request)
+      guard
+        let http = response as? HTTPURLResponse,
+        (200...299).contains(http.statusCode),
+        let items = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]]
+      else {
+        return nil
+      }
+      if
+        let json = try? JSONSerialization.data(withJSONObject: items),
+        let jsonString = String(data: json, encoding: .utf8)
+      {
+        ReactNativeSiriStore.defaults?.set(jsonString, forKey: "ReactNativeSiri.collection.\(name)")
+      }
+      return items
+    } catch {
+      return nil
+    }
+  }
+}
+
 enum ReactNativeSiriURL {
   private static let allowedCharacters = CharacterSet(
     charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"

@@ -65,6 +65,44 @@ export type ActionIntentConfig = BaseIntentConfig & {
 
 export type SiriIntentConfig = QueryIntentConfig | GetIntentConfig | ActionIntentConfig;
 
+export type SiriRemoteConfig = {
+  /**
+   * HTTPS GET endpoint returning a JSON array of records
+   * (`[{ "id": "...", ...fields }, ...]`). When set, the generated intents
+   * fetch this endpoint at intent time so Siri answers with live data even
+   * when the app has not run in a while. A successful fetch also refreshes
+   * the App Group cache.
+   */
+  url: string;
+  /**
+   * Shared-data key holding a JSON object of request headers (e.g. for
+   * auth), written from JS with `setRemoteHeaders(headers)`.
+   * Defaults to `siri_remote_headers`.
+   */
+  headersKey?: string;
+  /** Request timeout in seconds before falling back. Defaults to 5. */
+  timeoutSeconds?: number;
+  /**
+   * Fall back to the last-synced App Group cache when the fetch fails
+   * (offline, timeout, non-2xx). Defaults to true.
+   */
+  cacheFallback?: boolean;
+};
+
+export type ResolvedRemote = Required<SiriRemoteConfig>;
+
+/** Default shared-data key for remote request headers; mirrored in src/index.ts. */
+export const DEFAULT_REMOTE_HEADERS_KEY = 'siri_remote_headers';
+
+export function resolveRemote(remote: SiriRemoteConfig): ResolvedRemote {
+  return {
+    url: remote.url,
+    headersKey: remote.headersKey ?? DEFAULT_REMOTE_HEADERS_KEY,
+    timeoutSeconds: remote.timeoutSeconds ?? 5,
+    cacheFallback: remote.cacheFallback ?? true,
+  };
+}
+
 export type SiriPluginOptions = {
   /** App Group identifier, e.g. `group.com.example.app`. Must be registered with Apple. */
   appGroup: string;
@@ -72,6 +110,12 @@ export type SiriPluginOptions = {
   entity: SiriEntityConfig;
   /** Declarative intents generated into the main app target. */
   intents: SiriIntentConfig[];
+  /**
+   * Optional remote endpoint fetched natively at intent time, keeping Siri
+   * answers fresh while the app is closed. Without it, intents only read
+   * the data last synced from JS via `syncEntities`.
+   */
+  remote?: SiriRemoteConfig;
   /**
    * Escape hatch: project-relative paths (or `dir/*.swift` globs) of custom
    * Swift files copied verbatim into the generated SiriIntents group.
@@ -143,6 +187,27 @@ export function validateOptions(options: SiriPluginOptions): void {
   }
   if (!Array.isArray(options.intents) || options.intents.length === 0) {
     throw new Error('[react-native-siri] "intents" must be a non-empty array.');
+  }
+  if (options.remote !== undefined) {
+    const remote = options.remote;
+    if (!remote.url || !remote.url.startsWith('https://')) {
+      throw new Error(
+        `[react-native-siri] "remote.url" must be an https:// URL (App Transport Security blocks plain http), got: ${JSON.stringify(remote.url)}`
+      );
+    }
+    if (remote.headersKey !== undefined && !/^[A-Za-z][A-Za-z0-9_.-]*$/.test(remote.headersKey)) {
+      throw new Error(
+        `[react-native-siri] "remote.headersKey" must be an alphanumeric key, got: ${JSON.stringify(remote.headersKey)}`
+      );
+    }
+    if (
+      remote.timeoutSeconds !== undefined &&
+      (typeof remote.timeoutSeconds !== 'number' || remote.timeoutSeconds <= 0)
+    ) {
+      throw new Error(
+        `[react-native-siri] "remote.timeoutSeconds" must be a positive number, got: ${JSON.stringify(remote.timeoutSeconds)}`
+      );
+    }
   }
   const seenNames = new Set<string>();
   for (const intent of options.intents) {

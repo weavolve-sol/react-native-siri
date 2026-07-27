@@ -48,6 +48,26 @@ export async function setSharedData(key: string, value: string | null): Promise<
 }
 
 /**
+ * Default shared-data key the generated Swift reads request headers from;
+ * mirrors `DEFAULT_REMOTE_HEADERS_KEY` in the config plugin.
+ */
+const REMOTE_HEADERS_KEY = 'siri_remote_headers';
+
+/**
+ * Stores the HTTP headers (e.g. `{ Authorization: 'Bearer …' }`) that the
+ * generated intents attach when fetching the plugin's `remote.url` at intent
+ * time. Call it on login and whenever the token rotates; pass `null` to
+ * clear. Use a custom `key` only if you changed `remote.headersKey` in the
+ * plugin config.
+ */
+export async function setRemoteHeaders(
+  headers: Record<string, string> | null,
+  key: string = REMOTE_HEADERS_KEY
+): Promise<void> {
+  return setSharedData(key, headers === null ? null : JSON.stringify(headers));
+}
+
+/**
  * Manually re-registers App Shortcut phrase parameters
  * (`AppShortcutsProvider.updateAppShortcutParameters()`).
  * {@link syncEntities} already does this for you.

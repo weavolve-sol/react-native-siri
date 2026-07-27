@@ -5,6 +5,7 @@ import {
   ResolvedEntity,
   SiriPluginOptions,
   resolveEntity,
+  resolveRemote,
 } from './types';
 
 export type GeneratedSwiftFile = {
@@ -109,6 +110,7 @@ function queryMatchFields(options: SiriPluginOptions): string[] {
 
 function generateEntityFile(options: SiriPluginOptions): GeneratedSwiftFile {
   const entity = resolveEntity(options.entity);
+  const remote = options.remote ? resolveRemote(options.remote) : null;
   const typeName = entityTypeName(entity);
   const queryName = `${typeName}Query`;
 
@@ -138,8 +140,20 @@ function generateEntityFile(options: SiriPluginOptions): GeneratedSwiftFile {
     : `DisplayRepresentation(title: "\\(${entity.titleField})")`;
 
   const valueEntities = queryMatchFields(options)
-    .map((matchField) => generateValueEntity(entity, matchField))
+    .map((matchField) => generateValueEntity(entity, matchField, remote !== null))
     .join('\n');
+
+  const fetchAllBody = remote
+    ? `    if let items = await ReactNativeSiriRemote.fetchCollection(
+      name: "${entity.collection}",
+      url: "${escapeForSwiftLiteral(remote.url)}",
+      headersKey: "${escapeForSwiftLiteral(remote.headersKey)}",
+      timeout: ${remote.timeoutSeconds}
+    ) {
+      return items.compactMap { ${typeName}.from($0) }
+    }
+    return ${remote.cacheFallback ? 'all()' : '[]'}`
+    : `    all()`;
 
   const contents = `${HEADER}
 import AppIntents
@@ -175,23 +189,28 @@ ${fromArguments}
   static func all() -> [${typeName}] {
     ReactNativeSiriStore.collection("${entity.collection}").compactMap { ${typeName}.from($0) }
   }
+
+  /// Loads records at intent time${remote ? ' — fetches the remote endpoint for live data' : ''}.
+  static func fetchAll() async -> [${typeName}] {
+${fetchAllBody}
+  }
 }
 
 @available(iOS 16.0, *)
 struct ${queryName}: EntityStringQuery {
   func entities(for identifiers: [${typeName}.ID]) async throws -> [${typeName}] {
-    ${typeName}.all().filter { identifiers.contains($0.id) }
+    await ${typeName}.fetchAll().filter { identifiers.contains($0.id) }
   }
 
   func entities(matching string: String) async throws -> [${typeName}] {
-    ${typeName}.all().filter {
+    await ${typeName}.fetchAll().filter {
       $0.${entity.titleField}.localizedCaseInsensitiveContains(string) ||
       $0.id.localizedCaseInsensitiveContains(string)
     }
   }
 
   func suggestedEntities() async throws -> [${typeName}] {
-    ${typeName}.all()
+    await ${typeName}.fetchAll()
   }
 }
 ${valueEntities}`;
@@ -206,9 +225,18 @@ ${valueEntities}`;
  * are intentionally top-level and globally unique (Xcode 16+ requires unique
  * EntityQuery type names across the whole target).
  */
-function generateValueEntity(entity: ResolvedEntity, matchField: string): string {
+function generateValueEntity(
+  entity: ResolvedEntity,
+  matchField: string,
+  hasRemote: boolean
+): string {
   const typeName = valueEntityTypeName(entity, matchField);
   const queryName = `${typeName}Query`;
+  const fetchAllBody = hasRemote
+    ? `    // Refreshes the App Group cache from the remote endpoint first.
+    _ = await ${entityTypeName(entity)}.fetchAll()
+    return all()`
+    : `    all()`;
 
   return `
 @available(iOS 16.0, *)
@@ -237,20 +265,25 @@ struct ${typeName}: AppEntity, Identifiable {
     }
     return result
   }
+
+  /// Loads distinct values at intent time${hasRemote ? ', refreshing from the remote endpoint' : ''}.
+  static func fetchAll() async -> [${typeName}] {
+${fetchAllBody}
+  }
 }
 
 @available(iOS 16.0, *)
 struct ${queryName}: EntityStringQuery {
   func entities(for identifiers: [${typeName}.ID]) async throws -> [${typeName}] {
-    ${typeName}.all().filter { identifiers.contains($0.id) }
+    await ${typeName}.fetchAll().filter { identifiers.contains($0.id) }
   }
 
   func entities(matching string: String) async throws -> [${typeName}] {
-    ${typeName}.all().filter { $0.id.localizedCaseInsensitiveContains(string) }
+    await ${typeName}.fetchAll().filter { $0.id.localizedCaseInsensitiveContains(string) }
   }
 
   func suggestedEntities() async throws -> [${typeName}] {
-    ${typeName}.all()
+    await ${typeName}.fetchAll()
   }
 }
 `;
@@ -312,7 +345,7 @@ ${intentBoilerplate(intent)}
 
   func perform() async throws -> some IntentResult & ProvidesDialog & ReturnsValue<[${entityType}]> {
     let matchValue = ${paramVar}.id
-    let matches = ${entityType}.all().filter {
+    let matches = await ${entityType}.fetchAll().filter {
       $0.${intent.matchField}.localizedCaseInsensitiveCompare(matchValue) == .orderedSame
     }
 ${resultNamesLine}    let dialog: IntentDialog = matches.isEmpty
@@ -332,7 +365,7 @@ function generateGetIntent(intent: GetIntentConfig, entity: ResolvedEntity): Gen
 
   const dialogLiteral = renderSwiftLiteral(
     intent.dialog,
-    entityFieldTokens(entity, paramVar),
+    entityFieldTokens(entity, 'latest'),
     `intents.${intent.name}.dialog`
   );
 
@@ -352,7 +385,10 @@ ${intentBoilerplate(intent)}
   }
 
   func perform() async throws -> some IntentResult & ProvidesDialog & ReturnsValue<${entityType}> {
-    return .result(value: ${paramVar}, dialog: ${dialogLiteral})
+    // Re-resolve by id so the dialog speaks live values (Siri may have
+    // resolved the parameter from a slightly older snapshot).
+    let latest = await ${entityType}.fetchAll().first(where: { $0.id == ${paramVar}.id }) ?? ${paramVar}
+    return .result(value: latest, dialog: ${dialogLiteral})
   }
 }
 `;

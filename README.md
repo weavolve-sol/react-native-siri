@@ -145,6 +145,12 @@ type SiriPluginOptions = {
     typeDisplayName?: string;    // human name in Shortcuts; default = name
   };
   intents: IntentConfig[];       // see below
+  remote?: {                     // optional: fetch live data at intent time (see "Keeping data fresh")
+    url: string;                 // HTTPS GET endpoint returning [{ id, ...fields }, ...]
+    headersKey?: string;         // shared-data key with request headers; default "siri_remote_headers"
+    timeoutSeconds?: number;     // default 5
+    cacheFallback?: boolean;     // fall back to last-synced cache on failure; default true
+  };
   customSwiftFiles?: string[];   // escape hatch, e.g. ["./siri/*.swift"]
   siriUsageDescription?: string; // NSSiriUsageDescription
   userActivityTypes?: string[];  // NSUserActivityTypes; default ["<bundleId>.viewing"]
@@ -215,10 +221,77 @@ import * as Siri from '@weavolve/react-native-siri';
 | `donateUserActivity(options)` | Donates an `NSUserActivity` for the screen the user is viewing (title, `userInfo`, `keywords`, `persistentIdentifier`, search/prediction eligibility). |
 | `clearUserActivity()` | Resigns the current donated activity. |
 | `getSharedData(key)` / `setSharedData(key, value)` | Raw string storage in the App Group, readable from both JS and (custom) Swift. |
+| `setRemoteHeaders(headers)` | Stores the HTTP headers (e.g. auth token) the generated intents attach when fetching `remote.url`. Call on login and on token rotation; pass `null` to clear. |
 | `updateShortcuts()` | Manually re-registers App Shortcut phrase parameters (rarely needed — `syncEntities` does it). |
 | `getAppGroup()` | Returns the configured App Group id, or `null` if the plugin isn't set up. |
 
 On Android and web every function is a safe no-op.
+
+## Keeping data fresh while the app is closed
+
+Siri normally answers from the snapshot your app last synced with `syncEntities`. If the app
+hasn't run in a while, that snapshot goes stale. Three mechanisms address this, in order of
+reliability:
+
+### 1. Intent-time remote fetch (`remote` option) — always fresh
+
+Add `remote` to the plugin config and the generated Swift fetches your API **at the moment Siri
+asks**, no JS involved:
+
+```jsonc
+"remote": {
+  "url": "https://api.example.com/packages",
+  "timeoutSeconds": 5,
+  "cacheFallback": true
+}
+```
+
+- The endpoint must serve a JSON array shaped like your synced records: `[{ "id": "...", "name": "...", ... }]`.
+- A successful fetch also refreshes the App Group cache, so phrase suggestions and offline
+  fallbacks stay current.
+- On failure (offline, timeout, non-2xx) the intent falls back to the cached data
+  (`cacheFallback: true`).
+- For authenticated APIs, hand your token to the native side from JS:
+
+```ts
+import { setRemoteHeaders } from '@weavolve/react-native-siri';
+
+await setRemoteHeaders({ Authorization: `Bearer ${accessToken}` });
+```
+
+This is the only mechanism that works **even after the user force-quits the app**, because Siri
+spawns the app process for the intent itself.
+
+### 2. Periodic background refresh (`expo-background-task`)
+
+Wake your JS periodically to re-fetch and re-sync (see [`example/backgroundSync.ts`](./example/backgroundSync.ts)):
+
+```ts
+import * as BackgroundTask from 'expo-background-task';
+import * as TaskManager from 'expo-task-manager';
+import { syncEntities } from '@weavolve/react-native-siri';
+
+TaskManager.defineTask('siri-data-sync', async () => {
+  const items = await fetchLatestFromYourApi();
+  await syncEntities('packages', items);
+  return BackgroundTask.BackgroundTaskResult.Success;
+});
+
+await BackgroundTask.registerTaskAsync('siri-data-sync', { minimumInterval: 15 });
+```
+
+Honest caveats: iOS schedules these opportunistically — 15 minutes is the *minimum* interval,
+actual runs are often hours apart and depend on the user's usage patterns — and background tasks
+stop entirely once the user force-quits the app. Use this to keep phrase suggestions and the
+offline cache reasonably current, not for real-time answers.
+
+### 3. Push-driven updates (advanced)
+
+Silent pushes (`content-available: 1`) can wake the app to run a JS sync, but they're throttled
+and also don't survive force-quit. The robust push path is a **Notification Service Extension**
+that writes the push payload straight into the App Group store — it runs for every visible push
+even after force-quit. That requires an extra native target (e.g. via `@bacons/apple-targets`)
+and is currently outside this plugin's scope; combine it with `customSwiftFiles` if you need it.
 
 ## What you can build with it
 
