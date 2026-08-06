@@ -389,14 +389,6 @@ npm run build          # compile src/ (add `plugin` arg for the plugin)
 cd example && npm install && npx expo prebuild -p ios --clean
 ```
 
-## ❤️ Support this project
-
-If this library has saved you time or helped your app, please consider sponsoring its development.
-
-👉 Sponsor on GitHub: [https://github.com/sponsors/weavolve-sol](https://github.com/sponsors/mitul69)
-
-Every contribution helps keep the project maintained, compatible with the latest React Native releases, and free for the community.
-
 ## License
 
 MIT
